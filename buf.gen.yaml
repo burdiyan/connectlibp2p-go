@@ -1,0 +1,8 @@
+version: v2
+plugins:
+  - local: [go, tool, protoc-gen-go]
+    out: .
+    opt: module=github.com/burdiyan/connectlibp2p-go
+  - local: [go, run, connectrpc.com/connect/v2/cmd/protoc-gen-connect-go]
+    out: .
+    opt: module=github.com/burdiyan/connectlibp2p-go

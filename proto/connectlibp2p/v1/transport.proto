@@ -1,0 +1,33 @@
+syntax = "proto3";
+
+package connectlibp2p.v1;
+
+import "google/rpc/status.proto";
+
+option go_package = "github.com/burdiyan/connectlibp2p-go/internal/wire;wire";
+
+// Metadata preserves value order for each case-insensitive key. Senders use
+// canonical MIME header keys; receivers reject duplicate case aliases.
+message Metadata {
+  // Values holds all values for one key, including empty strings.
+  message Values {
+    repeated string values = 1;
+  }
+  map<string, Values> entries = 1;
+}
+
+// Open is the first request frame. Cardinality is determined by the server's
+// registered method, never by the remote peer.
+message Open {
+  string procedure = 1;
+  Metadata headers = 2;
+  // Remaining call budget at transmission, in nanoseconds; zero means omitted.
+  int64 timeout_ns = 3;
+}
+
+// End is mandatory, even for success. Status is present and uses the standard
+// RPC code numbers (zero means OK). Causes and remote-error flags are not sent.
+message End {
+  google.rpc.Status status = 1;
+  Metadata trailers = 2;
+}

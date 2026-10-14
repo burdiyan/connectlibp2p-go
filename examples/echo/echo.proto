@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package example.echo.v1;
+
+option go_package = "github.com/burdiyan/connectlibp2p-go/examples/echo/gen/echov1;echov1";
+
+service EchoService {
+  rpc Echo(EchoRequest) returns (EchoResponse);
+}
+
+message EchoRequest {
+  string message = 1;
+}
+
+message EchoResponse {
+  string message = 1;
+}

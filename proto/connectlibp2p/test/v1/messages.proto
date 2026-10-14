@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+package connectlibp2p.test.v1;
+
+option go_package = "github.com/burdiyan/connectlibp2p-go/internal/testpb;testpb";
+
+// These test-only messages exercise numbers, strings, repeated values, and bytes.
+message ListSpacesRequest {
+  int32 page_size = 1;
+  string page_token = 2;
+}
+
+message ListSpacesResponse {
+  repeated string spaces = 1;
+  string next_page_token = 2;
+}
+
+message Blob {
+  bytes cid = 1;
+  string cursor = 2;
+}

@@ -1,0 +1,18 @@
+[tools]
+go = "1.27.1"
+buf = "1.71.0"
+golangci-lint = "2.13.2"
+
+[tasks.generate]
+description = "Generate protobuf messages and Connect service bindings locally"
+run = "buf generate"
+
+[tasks.test]
+description = "Run transport tests with the race detector"
+run = "go test -race ./... -count=3 -timeout=180s"
+
+[tasks.vet]
+run = "go vet ./..."
+
+[tasks.lint]
+run = "golangci-lint run --no-config ./..."

@@ -1,0 +1,46 @@
+name: Test
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+env:
+  GOWORK: "off"
+  GOTOOLCHAIN: local
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        go: ["1.26.0", "1.27.1"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ matrix.go }}
+      - run: go mod download
+      - run: go test -race ./... -count=3 -timeout=180s
+      - run: go vet ./...
+      - run: test -z "$(gofmt -l .)"
+      - run: go run ./examples/echo
+      - name: Verify module files
+        run: |
+          go mod verify
+          go mod tidy
+          git diff --exit-code -- go.mod go.sum
+
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: jdx/mise-action@v2
+      - run: mise run lint
+      - run: mise run generate
+      - name: Verify generated files
+        run: |
+          git diff --exit-code
+          test -z "$(git ls-files --others --exclude-standard)"
