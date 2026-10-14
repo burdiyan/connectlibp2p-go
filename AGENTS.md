@@ -2,7 +2,7 @@
 
 This is a standalone Go transport library for Connect-Go v2 over native libp2p streams.
 The module is `github.com/burdiyan/connectlibp2p-go`; the public package is `connectlibp2p`.
-Read `README.md` for the public API, framing contract, resource limits, and cancellation caveat.
+Read `README.md` for usage, resource limits, and the cancellation caveat.
 Keep user-facing documentation in `README.md` and agent guidance in this file.
 
 ## Layout

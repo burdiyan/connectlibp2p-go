@@ -560,6 +560,84 @@ func TestResponseCardinality(t *testing.T) {
 	}
 }
 
+// partialWriteHost interrupts the first response frame after two bytes while
+// leaving later writes possible, exposing unsafe retries on a real connection.
+type partialWriteHost struct{ host.Host }
+
+func (h partialWriteHost) SetStreamHandler(id protocol.ID, handler network.StreamHandler) {
+	h.Host.SetStreamHandler(id, func(raw network.Stream) {
+		handler(&partialWriteStream{Stream: raw})
+	})
+}
+
+type partialWriteStream struct {
+	network.Stream
+	failed bool
+}
+
+func (s *partialWriteStream) Write(buf []byte) (int, error) {
+	if s.failed {
+		return s.Stream.Write(buf)
+	}
+	s.failed = true
+	n, err := s.Stream.Write(buf[:2])
+	if err == nil {
+		err = io.ErrShortWrite
+	}
+	return n, err
+}
+
+// TestResponseHeaderFailures distinguishes broken frame boundaries from
+// metadata rejected before writing, which can still receive a terminal status.
+func TestResponseHeaderFailures(t *testing.T) {
+	for _, kind := range []string{"tcp", "quic"} {
+		for _, mode := range []string{"partial-return", "partial-retry", "partial-send", "invalid", "oversized"} {
+			t.Run(kind+"/"+mode, func(t *testing.T) {
+				serverHost, clientHost := hosts(t, kind)
+				server := connect.NewServer()
+				spec := connect.Spec{Procedure: procedure}
+				server.Register(connect.Method{Spec: spec, Handler: func(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+					if err := stream.Receive(new(p2p.Blob)); err != nil {
+						return err
+					}
+					info, _ := connect.CallInfoForServerContext(ctx)
+					switch mode {
+					case "invalid":
+						info.ResponseHeader().Set("X-Test", "invalid\nvalue")
+					case "oversized":
+						info.ResponseHeader().Set("X-Test", strings.Repeat("x", 64<<10))
+					}
+					err := stream.SendHeaders()
+					switch mode {
+					case "partial-retry":
+						return stream.SendHeaders()
+					case "partial-send":
+						return stream.Send(&p2p.Blob{Cursor: "must not be sent"})
+					default:
+						return err
+					}
+				}})
+				servingHost := serverHost
+				want := connect.CodeUnavailable
+				switch mode {
+				case "invalid":
+					want = connect.CodeInternal
+				case "oversized":
+					want = connect.CodeResourceExhausted
+				default:
+					servingHost = partialWriteHost{serverHost}
+				}
+				t.Cleanup(connectlibp2p.Serve(t.Context(), servingHost, testProtocol, server))
+				client := connect.NewClient(connectlibp2p.NewTransport(clientHost, serverHost.ID(), testProtocol))
+				ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
+				defer cancel()
+				err := client.CallUnary(ctx, spec, &p2p.Blob{}, new(p2p.Blob))
+				require.Equal(t, want, connect.CodeOf(err), "%v", err)
+			})
+		}
+	}
+}
+
 type joinedHost struct {
 	host.Host
 	done chan struct{}

@@ -2,7 +2,7 @@
 // streams, without HTTP, a second multiplexer, or an RPC connection cache.
 // It implements all four RPC shapes with protobuf messages and identity
 // compression. Its versioned wire protocol is not the Connect HTTP protocol.
-// See README.md for the wire contract, limits, and cancellation caveat.
+// See README.md for usage, limits, and the cancellation caveat.
 package connectlibp2p
 
 //go:generate mise run generate
@@ -668,11 +668,15 @@ func (s *serverStream) SendHeaders() error {
 	if s.headers {
 		return nil
 	}
+	if s.sendErr != nil {
+		return s.sendErr
+	}
 	headers := getHeaders(s.info.ResponseHeader())
 	if err := setHeaders(new(connect.Header), headers); err != nil {
 		return connect.NewError(connect.CodeInternal, "invalid response metadata").WithCause(err)
 	}
 	if _, err := writeProto(s.raw, s.scope, frameHeaders, headers); err != nil {
+		s.sendErr = err
 		return err
 	}
 	s.headers = true
@@ -708,7 +712,7 @@ func (s *serverStream) Send(msg any) error {
 func (s *serverStream) finish(err error) error {
 	if s.sendErr != nil {
 		if _, coded := errors.AsType[*connect.Error](s.sendErr); !coded {
-			return s.sendErr // a partial message write leaves no safe frame boundary.
+			return s.sendErr // a partial frame write leaves no safe frame boundary.
 		}
 	}
 	if headerErr := s.SendHeaders(); headerErr != nil {
