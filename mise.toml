@@ -1,7 +1,7 @@
 [tools]
-go = "1.27.1"
+go = "1.27.3"
 buf = "1.71.0"
-golangci-lint = "2.13.2"
+golangci-lint = "2.15.0"
 
 [tasks.generate]
 description = "Generate protobuf messages and Connect service bindings locally"

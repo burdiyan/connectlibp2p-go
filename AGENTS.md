@@ -35,7 +35,7 @@ test -z "$(mise exec -- gofmt -l .)"
 ```
 
 The `test` task runs the race detector three times. CI tests both minimum Go 1.26.0
-and development Go 1.27.1; preserve minimum-version compatibility.
+and development Go 1.27.3; preserve minimum-version compatibility.
 Format edited Go files with `mise exec -- gofmt -w <files>`.
 When changing dependencies, run `mise exec -- go mod tidy` and review `go.mod`/`go.sum`.
 
